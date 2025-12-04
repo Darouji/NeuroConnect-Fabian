@@ -1,22 +1,19 @@
+// Archivo: lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'screens/welcome_screen.dart';
+import 'utils/app_theme.dart'; // Importamos el archivo de temas
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // App Check ELIMINADO para evitar el error 403
-
+  // Configuración de la barra de estado transparente
   SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      systemNavigationBarColor: Colors.white,
-      systemNavigationBarIconBrightness: Brightness.dark,
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ),
+    const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
   );
 
   SystemChrome.setPreferredOrientations([
@@ -35,22 +32,12 @@ class NeuroconectaApp extends StatelessWidget {
     return MaterialApp(
       title: 'NeuroConecta',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
-        useMaterial3: true,
-        scaffoldBackgroundColor: Colors.white,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          centerTitle: true,
-          iconTheme: IconThemeData(color: Colors.black87),
-          titleTextStyle: TextStyle(
-            color: Colors.black87,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+
+      // --- CONFIGURACIÓN DE TEMAS ---
+      theme: AppTheme.lightTheme, // Tema Claro
+      darkTheme: AppTheme.darkTheme, // Tema Oscuro
+      themeMode: ThemeMode.system, // Usa la configuración del sistema
+      // ------------------------------
       home: const WelcomeScreen(),
     );
   }

@@ -45,5 +45,21 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+    <string>Necesitamos acceso a tu galería para seleccionar el video de la cápsula.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Necesitamos acceso a la cámara para grabar el video.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Necesitamos acceso al micrófono para el audio del video.</string>
+    
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>fetch</string>
+        <string>remote-notification</string>
+    </array>
+    <key>LSSupportsOpeningDocumentsInPlace</key>
+    <true/>
+    <key>UIFileSharingEnabled</key>
+    <true/>
 </dict>
 </plist>

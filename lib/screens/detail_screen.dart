@@ -3,10 +3,10 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/recurso_model.dart';
 
 class DetailScreen extends StatefulWidget {
-  // Recibimos el objeto completo en lugar de solo el ID.
   final RecursoModel recurso;
 
   const DetailScreen({required this.recurso, super.key});
@@ -16,58 +16,55 @@ class DetailScreen extends StatefulWidget {
 }
 
 class _DetailScreenState extends State<DetailScreen> {
-  // Controladores para el video.
   VideoPlayerController? _videoPlayerController;
   ChewieController? _chewieController;
-
-  // Estado de carga del video.
   bool _isVideoInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    // Si el recurso tiene una URL de video, inicializamos el reproductor.
+    // Solo inicializamos si HAY URL de video
     if (widget.recurso.videoUrl != null &&
         widget.recurso.videoUrl!.isNotEmpty) {
       _initializePlayer();
     }
   }
 
-  // Configuración asíncrona del reproductor de video.
   Future<void> _initializePlayer() async {
     try {
-      // 1. Configuramos el controlador base con la URL de la red.
       _videoPlayerController = VideoPlayerController.networkUrl(
         Uri.parse(widget.recurso.videoUrl!),
       );
-
-      // 2. Inicializamos la conexión.
       await _videoPlayerController!.initialize();
-
-      // 3. Configuramos Chewie (la interfaz gráfica con controles).
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController!,
         autoPlay: false,
         looping: false,
         aspectRatio: _videoPlayerController!.value.aspectRatio,
-        placeholder: const Center(child: CircularProgressIndicator()),
-        errorBuilder: (context, errorMessage) {
-          return Center(child: Text('Error al cargar video: $errorMessage'));
-        },
       );
-
-      // 4. Actualizamos la interfaz para mostrar el video.
-      setState(() {
-        _isVideoInitialized = true;
-      });
+      setState(() => _isVideoInitialized = true);
     } catch (e) {
-      print('Error inicializando video: $e');
+      debugPrint('Error video: $e');
+    }
+  }
+
+  Future<void> _openFile() async {
+    final String? url = widget.recurso.archivoUrl;
+    if (url != null) {
+      final Uri uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No se pudo abrir el archivo')),
+          );
+      }
     }
   }
 
   @override
   void dispose() {
-    // Es CRÍTICO liberar los recursos de video al salir de la pantalla.
     _videoPlayerController?.dispose();
     _chewieController?.dispose();
     super.dispose();
@@ -75,93 +72,123 @@ class _DetailScreenState extends State<DetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    bool hasVideo =
+        widget.recurso.videoUrl != null && widget.recurso.videoUrl!.isNotEmpty;
+    bool hasFile =
+        widget.recurso.archivoUrl != null &&
+        widget.recurso.archivoUrl!.isNotEmpty;
+
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Detalle de Cápsula'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 1,
+        title: const Text('Detalle del Recurso'),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- SECCIÓN DE VIDEO ---
-            Container(
-              width: double.infinity,
-              height: 250, // Altura fija para el área del video.
-              color: Colors.black, // Fondo negro estilo cine.
-              child: _isVideoInitialized && _chewieController != null
-                  ? Chewie(controller: _chewieController!)
-                  : const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.play_circle_outline,
-                            color: Colors.white54,
-                            size: 50,
-                          ),
-                          SizedBox(height: 10),
-                          Text(
-                            'Cargando video o video no disponible',
-                            style: TextStyle(color: Colors.white54),
-                          ),
-                        ],
+            // SECCIÓN VIDEO (Solo se muestra si hay video)
+            if (hasVideo)
+              Container(
+                width: double.infinity,
+                height: 250,
+                color: Colors.black,
+                child: _isVideoInitialized && _chewieController != null
+                    ? Chewie(controller: _chewieController!)
+                    : const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.play_circle_outline,
+                              color: Colors.white54,
+                              size: 50,
+                            ),
+                            Text(
+                              'Cargando video...',
+                              style: TextStyle(color: Colors.white54),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-            ),
+              )
+            else
+              // Header alternativo si no hay video (para que no se vea vacío arriba)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(30),
+                color: Colors.grey[200],
+                child: const Icon(Icons.article, size: 80, color: Colors.grey),
+              ),
 
-            // --- SECCIÓN DE INFORMACIÓN ---
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Título principal.
                   Text(
                     widget.recurso.titulo,
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 10),
-
-                  // Autor y Fecha (usamos un icono para decorar).
                   Row(
                     children: [
-                      const Icon(Icons.person_pin, color: Colors.blueAccent),
-                      const SizedBox(width: 8),
+                      const Icon(Icons.person, size: 18, color: Colors.grey),
+                      const SizedBox(width: 5),
                       Text(
                         'Autor: ${widget.recurso.autor}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey,
-                        ),
+                        style: const TextStyle(color: Colors.grey),
                       ),
                     ],
                   ),
-                  const Divider(height: 30, thickness: 1),
+                  const Divider(height: 30),
 
-                  // Descripción.
                   const Text(
-                    'Descripción de la actividad:',
+                    'Descripción:',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     widget.recurso.descripcion,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      height:
-                          1.5, // Mayor altura de línea para mejor legibilidad.
-                      color: Colors.black87,
-                    ),
+                    style: const TextStyle(fontSize: 16, height: 1.5),
                   ),
+
+                  const SizedBox(height: 30),
+
+                  // BOTÓN DESCARGA
+                  if (hasFile)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton.icon(
+                        onPressed: _openFile,
+                        icon: const Icon(
+                          Icons.download,
+                          color: Colors.blueAccent,
+                        ),
+                        label: Text(
+                          'Descargar Material: ${widget.recurso.archivoNombre ?? "Documento"}',
+                          style: const TextStyle(
+                            color: Colors.blueAccent,
+                            fontSize: 16,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                            color: Colors.blueAccent,
+                            width: 1.5,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

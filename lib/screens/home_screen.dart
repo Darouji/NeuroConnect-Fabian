@@ -1,14 +1,14 @@
 // Archivo: lib/screens/home_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firebase_service.dart';
-import '../models/recurso_model.dart';
 import '../utils/constants.dart';
+import '../utils/app_colors.dart';
+import '../widgets/category_card.dart'; // Ahora debería funcionar porque renombraste la carpeta
 import 'form_screen.dart';
-import 'detail_screen.dart';
 import 'auth/login_screen.dart';
+import 'category_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,186 +21,184 @@ class _HomeScreenState extends State<HomeScreen> {
   final FirebaseService _firebaseService = FirebaseService();
   bool _isAdmin = false;
 
+  final List<Map<String, dynamic>> _categories = [
+    {
+      'title': 'Terapias Clínicas',
+      'desc': 'Fonoaudiología y Terapia Ocupacional',
+      'icon': Icons.medical_services,
+      'color': AppColors.catTerapias,
+    },
+    {
+      'title': 'Salud Mental',
+      'desc': 'Psicología y Psiquiatría',
+      'icon': Icons.psychology,
+      'color': AppColors.catSaludMental,
+    },
+    {
+      'title': 'Contención Emocional',
+      'desc': 'Estrategias de regulación',
+      'icon': Icons.favorite,
+      'color': AppColors.catContencion,
+    },
+    {
+      'title': 'Área Especial',
+      'desc': 'Educación Diferencial',
+      'icon': Icons.star,
+      'color': AppColors.catAreaEspecial,
+    },
+    {
+      'title': 'MyFunner',
+      'desc': 'Actividades recreativas',
+      'icon': Icons.sentiment_satisfied_alt,
+      'color': AppColors.catMyFunner,
+    },
+    {
+      'title': 'General',
+      'desc': 'Información variada',
+      'icon': Icons.info,
+      'color': AppColors.catGeneral,
+    },
+  ];
+
   @override
   void initState() {
     super.initState();
-    // Ejecutamos la verificación después de que se construya el primer frame
-    // para evitar bloqueos durante la inicialización.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkRole();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkRole());
   }
 
   void _checkRole() {
     final User? user = _firebaseService.getCurrentUser();
-    // Verificamos si existe usuario y correo, y comparamos con la constante.
     if (user != null && user.email != null) {
       if (user.email!.trim().toLowerCase() ==
           AppConstants.adminEmail.trim().toLowerCase()) {
-        if (mounted) {
-          setState(() {
-            _isAdmin = true;
-          });
-        }
+        if (mounted) setState(() => _isAdmin = true);
       }
     }
+  }
+
+  void _showFeedbackDialog() {
+    final TextEditingController feedbackCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sugerencias'),
+        content: TextField(
+          controller: feedbackCtrl,
+          decoration: const InputDecoration(
+            hintText: 'Escribe tu sugerencia aquí...',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (feedbackCtrl.text.isNotEmpty) {
+                // Guardamos referencia a los datos antes de cerrar
+                final text = feedbackCtrl.text;
+                final email = _firebaseService.getCurrentUser()?.email;
+
+                _firebaseService.sendFeedback(text, email);
+                Navigator.pop(context);
+
+                // Verificamos mounted antes de usar ScaffoldMessenger
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Gracias por tu aporte')),
+                  );
+                }
+              }
+            },
+            child: const Text('Enviar'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Biblioteca NeuroConecta'),
+        title: const Text('NeuroConecta'),
         centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 1,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout, color: Colors.grey),
+            icon: const Icon(Icons.mail_outline),
+            onPressed: _showFeedbackDialog,
+            tooltip: 'Feedback',
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
             onPressed: () async {
               await _firebaseService.signOut();
-              if (mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
+              // Verificación de seguridad (Async gap)
+              if (!context.mounted) return;
+
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                (route) => false,
+              );
             },
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _firebaseService.getRecursos(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            // Imprimimos el error en consola para que veas si es por permisos/AppCheck
-            print("Error en StreamBuilder: ${snapshot.error}");
-            return const Center(
-              child: Text('Error al cargar recursos. Ver consola.'),
-            );
-          }
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.video_library_outlined,
-                    size: 60,
-                    color: Colors.grey,
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'No hay cápsulas disponibles aún.',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return GridView.builder(
-            padding: const EdgeInsets.all(16.0),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16.0,
-              mainAxisSpacing: 16.0,
-              childAspectRatio: 0.85,
-            ),
-            itemCount: snapshot.data!.docs.length,
-            itemBuilder: (context, index) {
-              var doc = snapshot.data!.docs[index];
-              RecursoModel recurso = RecursoModel.fromMap(
-                doc.data() as Map<String, dynamic>,
-                doc.id,
-              );
-              return _buildRecursoCard(context, recurso);
-            },
-          );
-        },
-      ),
-      // Solo mostramos el botón si es administrador
-      floatingActionButton: _isAdmin
-          ? FloatingActionButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const FormScreen()),
-                );
-              },
-              backgroundColor: Colors.blueAccent,
-              child: const Icon(Icons.add, color: Colors.white),
-            )
-          : null,
-    );
-  }
-
-  Widget _buildRecursoCard(BuildContext context, RecursoModel recurso) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Colors.white,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => DetailScreen(recurso: recurso),
-            ),
-          );
-        },
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              flex: 3,
-              child: Container(
-                color: Colors.blue[50],
-                child: const Center(
-                  child: Icon(
-                    Icons.play_circle_fill,
-                    size: 50,
-                    color: Colors.blueAccent,
-                  ),
-                ),
-              ),
+            const Text(
+              "Selecciona una categoría",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 16),
             Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      recurso.titulo,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      recurso.autor,
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+              child: GridView.builder(
+                itemCount: _categories.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.75,
                 ),
+                itemBuilder: (context, index) {
+                  final cat = _categories[index];
+
+                  return CategoryCard(
+                    title: cat['title'],
+                    description: cat['desc'],
+                    icon: cat['icon'],
+                    categoryColor: cat['color'],
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => CategoryListScreen(
+                            categoryName: cat['title'],
+                            categoryColor: cat['color'],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
             ),
           ],
         ),
       ),
+      floatingActionButton: _isAdmin
+          ? FloatingActionButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const FormScreen()),
+              ),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              child: const Icon(Icons.add, color: Colors.white),
+            )
+          : null,
     );
   }
 }
