@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../home_screen.dart';
+import '../../screens/home_screen.dart';
 import '../../services/firebase_service.dart';
 import 'package:neuro_conecta/screens/register_screen.dart';
 
@@ -15,92 +15,120 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  // Controladores de texto
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
   final FirebaseService _firebaseService = FirebaseService();
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    // Verificamos si el usuario YA está logueado al abrir la pantalla.
-    _checkCurrentUser();
+    // Verificación segura del usuario al iniciar.
+    // Usamos addPostFrameCallback para asegurar que la UI esté lista antes de navegar.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkCurrentUser();
+    });
   }
 
+  // Método seguro para verificar si ya hay sesión.
   void _checkCurrentUser() async {
-    // Damos un pequeño respiro para que Flutter termine de construir la UI.
-    await Future.delayed(const Duration(milliseconds: 500));
     final user = _firebaseService.getCurrentUser();
-    if (user != null && mounted) {
-      print("Usuario ya logueado detectado: ${user.uid}. Redirigiendo...");
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
+    if (user != null) {
+      if (mounted) {
+        _navigateToHome();
+      }
     }
   }
 
+  // Método centralizado para navegar al Home y borrar historial.
+  void _navigateToHome() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
+      (Route<dynamic> route) => false, // Elimina todas las rutas anteriores.
+    );
+  }
+
+  // Lógica de inicio de sesión con Correo.
   void _signInWithEmail() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_isLoading) return;
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
       await _firebaseService.signInWithEmail(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
-      // La redirección la maneja el listener de FirebaseAuth o el await exitoso.
+
+      // Si no hubo error, navegamos.
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        _navigateToHome();
       }
     } on FirebaseAuthException catch (e) {
-      String message = 'Error: ${e.message}';
-      if (e.code == 'user-not-found')
-        message = 'Usuario no encontrado.';
-      else if (e.code == 'wrong-password')
+      String message = 'Ocurrió un error al iniciar sesión.';
+      if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
+        message = 'Usuario o contraseña incorrectos.';
+      } else if (e.code == 'wrong-password') {
         message = 'Contraseña incorrecta.';
+      } else if (e.code == 'invalid-email') {
+        message = 'El formato del correo no es válido.';
+      }
 
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
+        );
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        ).showSnackBar(SnackBar(content: Text('Error inesperado: $e')));
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      // Siempre detenemos el indicador de carga.
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
+  // Lógica de inicio de sesión con Google.
   void _signInWithGoogle() async {
-    if (_isLoading) return;
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
-      print("Iniciando flujo de Google...");
       final userCredential = await _firebaseService.signInWithGoogle();
 
       if (userCredential != null) {
-        print("Login exitoso. Usuario: ${userCredential.user?.uid}");
         if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
+          _navigateToHome();
         }
       } else {
-        print("El usuario canceló el login de Google.");
+        // El usuario cerró la ventana de Google sin seleccionar cuenta.
+        print("Login cancelado por el usuario.");
       }
     } catch (e) {
-      print("Error en Login Google: $e"); // Ver esto en la consola es clave
       if (mounted) {
-        // Mostramos el error exacto para depurar
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ).showSnackBar(SnackBar(content: Text('Error con Google: $e')));
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -113,38 +141,48 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Usamos LayoutBuilder para adaptar el diseño si el teclado aparece
+    // Si está cargando, bloqueamos la pantalla para evitar múltiples clics.
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Inicio de Sesión'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('Inicio de Sesión'),
+        centerTitle: true,
+        automaticallyImplyLeading:
+            false, // Quita la flecha de volver atrás si vienes de Welcome.
+      ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              // --- BRANDING ---
-              Container(
-                constraints: const BoxConstraints(
-                  maxHeight: 250,
-                ), // Evita desbordes
-                width: double.infinity,
-                alignment: Alignment.center,
+              // Logo
+              SizedBox(
+                height: 180,
                 child: Image.asset(
-                  'assets/images/neuro_conecta_logo.png',
+                  'assets/images/neuro_conecta_logo.png', // Asegúrate que esta ruta es correcta en tu pubspec.
                   fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.image_not_supported,
+                      size: 100,
+                      color: Colors.grey,
+                    );
+                  },
                 ),
               ),
-              const SizedBox(height: 10),
-
+              const SizedBox(height: 20),
               const Text(
                 'Bienvenido a NeuroConecta',
-                textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 30),
 
-              // --- FORMULARIO ---
+              // Formulario
               Form(
                 key: _formKey,
                 child: Column(
@@ -156,12 +194,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         labelText: 'Correo Electrónico',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.email),
-                        isDense: true,
                       ),
-                      validator: (value) =>
-                          value == null || !value.contains('@')
-                          ? 'Correo inválido'
-                          : null,
+                      validator: (value) {
+                        if (value == null || !value.contains('@')) {
+                          return 'Introduce un correo válido.';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -171,64 +210,70 @@ class _LoginScreenState extends State<LoginScreen> {
                         labelText: 'Contraseña',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.lock),
-                        isDense: true,
                       ),
-                      validator: (value) => value == null || value.length < 6
-                          ? 'Mínimo 6 caracteres'
-                          : null,
+                      validator: (value) {
+                        if (value == null || value.length < 6) {
+                          return 'Mínimo 6 caracteres.';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 24),
 
-                    _isLoading
-                        ? const CircularProgressIndicator()
-                        : ElevatedButton(
-                            onPressed: _signInWithEmail,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blueAccent,
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size(double.infinity, 50),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text(
-                              'Ingresar',
-                              style: TextStyle(fontSize: 18),
-                            ),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _signInWithEmail,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
+                        ),
+                        child: const Text(
+                          'Ingresar',
+                          style: TextStyle(fontSize: 18),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
 
               const SizedBox(height: 20),
-              const Text(
-                'O',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
+              const Row(
+                children: [
+                  Expanded(child: Divider()),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Text('O', style: TextStyle(color: Colors.grey)),
+                  ),
+                  Expanded(child: Divider()),
+                ],
               ),
               const SizedBox(height: 20),
 
-              // --- BOTÓN GOOGLE ---
-              ElevatedButton.icon(
-                onPressed: _signInWithGoogle,
-                icon: const Icon(
-                  Icons.g_mobiledata,
-                  size: 35,
-                  color: Colors.blue,
-                ),
-                label: const Text(
-                  'Continuar con Google',
-                  style: TextStyle(fontSize: 18, color: Colors.black87),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 50),
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                    side: const BorderSide(color: Colors.grey),
+              // Botón Google
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton.icon(
+                  onPressed: _signInWithGoogle,
+                  icon: const Icon(
+                    Icons.g_mobiledata,
+                    size: 30,
+                    color: Colors.red,
+                  ),
+                  label: const Text(
+                    'Continuar con Google',
+                    style: TextStyle(fontSize: 18, color: Colors.black87),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ),
@@ -242,7 +287,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   );
                 },
-                child: const Text('¿No tienes cuenta? Regístrate aquí.'),
+                child: const Text('¿No tienes cuenta? Regístrate aquí'),
               ),
             ],
           ),

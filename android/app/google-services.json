@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "643004916340-4j5cnpfhsqklcijkjp1kigm1qpqmbpth.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.neuro_conecta",
+            "certificate_hash": "f6026e52c8c8b8e6d9337d7a458269841c46eb51"
+          }
+        },
+        {
           "client_id": "643004916340-o92mb9aikfpeukj7ajh1v20df3jti78q.apps.googleusercontent.com",
           "client_type": 3
         }

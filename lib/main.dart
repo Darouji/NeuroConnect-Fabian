@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Necesario para controlar la barra de sistema (el borde gris).
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart'; // <-- Agregado para App Check.
 import 'firebase_options.dart';
 import 'screens/welcome_screen.dart';
 
@@ -12,6 +13,13 @@ void main() async {
 
   // Inicializamos Firebase con la configuración generada automáticamente.
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // --- ACTIVAR APP CHECK (SOLUCIÓN AL ERROR DE AUTH) ---
+  // Esto evita el error "No AppCheckProvider installed" y detiene que Firebase bloquee tus requests.
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: AndroidProvider.playIntegrity,
+    appleProvider: AppleProvider.deviceCheck,
+  );
 
   // --- SOLUCIÓN DEL BANNER GRIS ---
   // Configuramos el estilo del sistema para que la barra de navegación (abajo)
