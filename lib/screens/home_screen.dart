@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firebase_service.dart';
 import '../models/recurso_model.dart';
-import '../utils/constants.dart'; // Importante: Importar las constantes
+import '../utils/constants.dart';
 import 'form_screen.dart';
 import 'detail_screen.dart';
 import 'auth/login_screen.dart';
@@ -24,19 +24,24 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _checkRole();
+    // Ejecutamos la verificación después de que se construya el primer frame
+    // para evitar bloqueos durante la inicialización.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkRole();
+    });
   }
 
-  // Verifica si el usuario actual es el administrador
   void _checkRole() {
     final User? user = _firebaseService.getCurrentUser();
+    // Verificamos si existe usuario y correo, y comparamos con la constante.
     if (user != null && user.email != null) {
-      // Comparamos el email actual con el email definido en constantes
       if (user.email!.trim().toLowerCase() ==
           AppConstants.adminEmail.trim().toLowerCase()) {
-        setState(() {
-          _isAdmin = true;
-        });
+        if (mounted) {
+          setState(() {
+            _isAdmin = true;
+          });
+        }
       }
     }
   }
@@ -55,7 +60,6 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.grey),
             onPressed: () async {
-              // Cierra sesión y vuelve al login limpiando historial
               await _firebaseService.signOut();
               if (mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
@@ -70,12 +74,18 @@ class _HomeScreenState extends State<HomeScreen> {
       body: StreamBuilder<QuerySnapshot>(
         stream: _firebaseService.getRecursos(),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            // Imprimimos el error en consola para que veas si es por permisos/AppCheck
+            print("Error en StreamBuilder: ${snapshot.error}");
+            return const Center(
+              child: Text('Error al cargar recursos. Ver consola.'),
+            );
+          }
+
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError) {
-            return const Center(child: Text('Error al cargar recursos.'));
-          }
+
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(
               child: Column(
@@ -116,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         },
       ),
-      // EL BOTÓN SOLO APARECE SI ES ADMIN
+      // Solo mostramos el botón si es administrador
       floatingActionButton: _isAdmin
           ? FloatingActionButton(
               onPressed: () {
@@ -127,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
               backgroundColor: Colors.blueAccent,
               child: const Icon(Icons.add, color: Colors.white),
             )
-          : null, // Si no es admin, no hay botón.
+          : null,
     );
   }
 
