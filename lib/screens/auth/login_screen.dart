@@ -14,20 +14,31 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // Clave global para validar el formulario.
   final _formKey = GlobalKey<FormState>();
-
-  // Controladores para capturar el texto ingresado.
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
-  // Instancia de nuestro servicio de Firebase.
   final FirebaseService _firebaseService = FirebaseService();
-
-  // Estado de carga para mostrar el spinner.
   bool _isLoading = false;
 
-  // Lógica para iniciar sesión con Correo.
+  @override
+  void initState() {
+    super.initState();
+    // Verificamos si el usuario YA está logueado al abrir la pantalla.
+    _checkCurrentUser();
+  }
+
+  void _checkCurrentUser() async {
+    // Damos un pequeño respiro para que Flutter termine de construir la UI.
+    await Future.delayed(const Duration(milliseconds: 500));
+    final user = _firebaseService.getCurrentUser();
+    if (user != null && mounted) {
+      print("Usuario ya logueado detectado: ${user.uid}. Redirigiendo...");
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    }
+  }
+
   void _signInWithEmail() async {
     if (!_formKey.currentState!.validate()) return;
     if (_isLoading) return;
@@ -39,14 +50,14 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
-
+      // La redirección la maneja el listener de FirebaseAuth o el await exitoso.
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {
-      String message = 'Error de autenticación.';
+      String message = 'Error: ${e.message}';
       if (e.code == 'user-not-found')
         message = 'Usuario no encontrado.';
       else if (e.code == 'wrong-password')
@@ -62,23 +73,31 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Lógica para iniciar sesión con Google.
   void _signInWithGoogle() async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
 
     try {
+      print("Iniciando flujo de Google...");
       final userCredential = await _firebaseService.signInWithGoogle();
-      if (userCredential != null && mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+
+      if (userCredential != null) {
+        print("Login exitoso. Usuario: ${userCredential.user?.uid}");
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        }
+      } else {
+        print("El usuario canceló el login de Google.");
       }
     } catch (e) {
+      print("Error en Login Google: $e"); // Ver esto en la consola es clave
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al iniciar con Google.')),
-        );
+        // Mostramos el error exacto para depurar
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -94,13 +113,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Obtengo la altura total de la pantalla para calcular espacios si es necesario.
-    final size = MediaQuery.of(context).size;
-
+    // Usamos LayoutBuilder para adaptar el diseño si el teclado aparece
     return Scaffold(
       appBar: AppBar(title: const Text('Inicio de Sesión'), centerTitle: true),
       body: Center(
-        // Center asegura que el contenido del ScrollView esté centrado si sobra espacio.
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Column(
@@ -108,12 +124,11 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
               // --- BRANDING ---
-              // Logo con altura de 300 como solicitaste.
-              // Usamos Container para asegurar que respete el espacio.
               Container(
-                height: 300,
-                width: double
-                    .infinity, // Ocupa el ancho disponible para centrar la imagen.
+                constraints: const BoxConstraints(
+                  maxHeight: 250,
+                ), // Evita desbordes
+                width: double.infinity,
                 alignment: Alignment.center,
                 child: Image.asset(
                   'assets/images/neuro_conecta_logo.png',
@@ -141,8 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         labelText: 'Correo Electrónico',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.email),
-                        isDense:
-                            true, // Hace el campo un poco más compacto visualmente.
+                        isDense: true,
                       ),
                       validator: (value) =>
                           value == null || !value.contains('@')
@@ -220,7 +234,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Botón Registro
               TextButton(
                 onPressed: () {
                   Navigator.of(context).push(

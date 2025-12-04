@@ -1,171 +1,199 @@
+// Archivo: lib/screens/home_screen.dart
+
 import 'package:flutter/material.dart';
-// Importo las pantallas a las que puedo navegar desde el Home.
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/firebase_service.dart';
+import '../models/recurso_model.dart';
 import 'form_screen.dart';
 import 'detail_screen.dart';
+import 'auth/login_screen.dart'; // Para redirigir al salir.
 
-// Widget para la pantalla principal después del login.
+// Widget para la pantalla principal (Dashboard).
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Instancia del servicio para leer datos y cerrar sesión.
+    final FirebaseService firebaseService = FirebaseService();
+
     return Scaffold(
+      // Fondo de color neutro suave (blanco humo/gris muy claro) para bajo estímulo visual.
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Dashboard de Neuroconecta'),
+        title: const Text('Biblioteca NeuroConecta'),
         centerTitle: true,
-        backgroundColor: Colors.blueAccent,
-        foregroundColor: Colors.white,
-        // Agrego un botón de "Cerrar Sesión" en la AppBar.
+        // Usamos un color sólido pero no chillón.
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 1,
         actions: [
+          // Botón discreto para cerrar sesión.
           IconButton(
-            icon: const Icon(Icons.logout),
-            // La lógica real de cerrar sesión debe ir aquí.
-            onPressed: () {
-              // Simulación: Navegar de vuelta al Login después de cerrar sesión.
-              // Navigator.of(context).pushReplacementNamed('/login');
-              // Por ahora, solo muestro un mensaje.
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Sesión cerrada (simulación)')),
-              );
+            icon: const Icon(Icons.logout, color: Colors.grey),
+            onPressed: () async {
+              await firebaseService.signOut();
+              if (context.mounted) {
+                // Redirigimos al Login y eliminamos el historial de navegación.
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+              }
             },
           ),
         ],
       ),
-      // Muestro el contenido en una vista que permite desplazamiento.
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          // Alineo los widgets al inicio de la columna.
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            // Título de bienvenida con el nombre del usuario (simulado).
-            const Text(
-              '¡Hola, Usuario!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Encuentra tus recursos psicopedagógicos y de contención emocional.',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            const Divider(height: 32),
+      // StreamBuilder escucha la base de datos en tiempo real.
+      body: StreamBuilder<QuerySnapshot>(
+        stream: firebaseService.getRecursos(),
+        builder: (context, snapshot) {
+          // 1. Estado de carga.
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            // GRID: Uso un GridView para mostrar las Cards principales de forma ordenada.
-            GridView.count(
-              // Deshabilito el propio scroll del GridView.
-              physics: const NeverScrollableScrollPhysics(),
-              // Hace que el GridView tome solo el espacio necesario (importante dentro de SingleChildScrollView).
-              shrinkWrap: true,
-              // Dos columnas.
+          // 2. Manejo de errores.
+          if (snapshot.hasError) {
+            return const Center(child: Text('Error al cargar recursos.'));
+          }
+
+          // 3. Verificamos si hay datos.
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.video_library_outlined,
+                    size: 60,
+                    color: Colors.grey,
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    'No hay cápsulas disponibles aún.',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // 4. Mostramos la cuadrícula (Grid) de recursos.
+          return GridView.builder(
+            padding: const EdgeInsets.all(16.0),
+            // Definimos una cuadrícula fija de 2 columnas.
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              // Espaciado entre las cards.
               crossAxisSpacing: 16.0,
               mainAxisSpacing: 16.0,
-              // Lista de las cards funcionales.
-              children: <Widget>[
-                // Card 1: Acceso al Formulario (CRUD).
-                _buildFeatureCard(
-                  context,
-                  title: 'Mis Recursos (CRUD)',
-                  icon: Icons.edit_note,
-                  color: Colors.deepOrangeAccent,
-                  // Navego a la pantalla de Formulario/CRUD.
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const FormScreen(),
-                      ),
-                    );
-                  },
-                ),
-
-                // Card 2: Acceso a la Pantalla de Detalle (Simulación).
-                _buildFeatureCard(
-                  context,
-                  title: 'Detalles de Actividad',
-                  icon: Icons.insights,
-                  color: Colors.teal,
-                  // Navego a la pantalla de Detalle.
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const DetailScreen(itemId: '123'),
-                      ),
-                    );
-                  },
-                ),
-
-                // Card 3: Otras funcionalidades de la aplicación.
-                _buildFeatureCard(
-                  context,
-                  title: 'Orientación Profesional',
-                  icon: Icons.record_voice_over,
-                  color: Colors.purple,
-                  onTap: () {
-                    // Acción para orientación.
-                  },
-                ),
-
-                // Card 4: Acceso a recursos de apoyo emocional.
-                _buildFeatureCard(
-                  context,
-                  title: 'Apoyo Emocional',
-                  icon: Icons.favorite_border,
-                  color: Colors.pink,
-                  onTap: () {
-                    // Acción para apoyo emocional.
-                  },
-                ),
-              ],
+              childAspectRatio:
+                  0.85, // Relación de aspecto para que sean "tarjetas" verticales.
             ),
-          ],
-        ),
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              // Obtenemos el documento individual.
+              var doc = snapshot.data!.docs[index];
+              // Lo convertimos a nuestro modelo seguro.
+              RecursoModel recurso = RecursoModel.fromMap(
+                doc.data() as Map<String, dynamic>,
+                doc.id,
+              );
+
+              return _buildRecursoCard(context, recurso);
+            },
+          );
+        },
+      ),
+      // Botón flotante para el Administrador (Subir contenido).
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (context) => const FormScreen()));
+        },
+        backgroundColor: Colors.blueAccent,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
-  // Widget privado para construir una Card de funcionalidad reutilizable.
-  Widget _buildFeatureCard(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    // InkWell permite hacer un widget interactivo con efecto de toque (splash).
-    return InkWell(
-      onTap: onTap,
-      child: Card(
-        // Elevación para darle un efecto de profundidad.
-        elevation: 4,
-        // Forma con esquinas redondeadas.
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            // Distribuyo los widgets verticalmente dentro de la card.
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              // El ícono de la funcionalidad.
-              Icon(icon, size: 40, color: color),
-              const SizedBox(height: 10),
-              // El título de la funcionalidad.
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+  // Widget para construir cada tarjeta individual (Pictograma).
+  Widget _buildRecursoCard(BuildContext context, RecursoModel recurso) {
+    return Card(
+      // Elevación baja para diseño plano y limpio ("cuadradito").
+      elevation: 2,
+      // Forma rectangular con bordes muy ligeramente redondeados.
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: Colors.white,
+      clipBehavior:
+          Clip.antiAlias, // Asegura que el contenido respete los bordes.
+      child: InkWell(
+        // Al tocar, vamos a la pantalla de detalle pasando el objeto completo.
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => DetailScreen(recurso: recurso),
+            ),
+          );
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Parte superior: Icono representativo o miniatura.
+            Expanded(
+              flex: 3, // Ocupa más espacio visual.
+              child: Container(
+                color: Colors.blue[50], // Color de fondo suave (pastel).
+                child: const Center(
+                  child: Icon(
+                    Icons.play_circle_fill, // Icono de reproducción.
+                    size: 50,
+                    color: Colors.blueAccent,
+                  ),
                 ),
               ),
-              const SizedBox(height: 5),
-              // Pequeño indicador.
-              const Text(
-                'Acceder',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            // Parte inferior: Título y Autor.
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      recurso.titulo,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.black87,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.person, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            recurso.autor,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
