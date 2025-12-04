@@ -21,6 +21,7 @@ class CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Detecto si el modo oscuro está activo para ajustar bordes y transparencias.
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final borderColor = isDarkMode
         ? AppColors.borderDark
@@ -37,12 +38,13 @@ class CategoryCard extends StatelessWidget {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
+        onTap: onTap, // Ejecuto la acción que me pasaron desde el Home.
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Título de la categoría.
               Text(
                 title,
                 textAlign: TextAlign.center,
@@ -55,11 +57,11 @@ class CategoryCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
 
+              // Círculo con el icono. Ajusto la opacidad según el tema.
               Container(
                 height: 70,
                 width: 70,
                 decoration: BoxDecoration(
-                  // CORRECCIÓN: Usamos .withValues para Flutter moderno
                   color: categoryColor.withValues(
                     alpha: isDarkMode ? 0.3 : 1.0,
                   ),
@@ -74,6 +76,7 @@ class CategoryCard extends StatelessWidget {
                 child: Icon(icon, size: 35, color: Colors.white),
               ),
 
+              // Descripción pequeña abajo.
               Text(
                 description,
                 textAlign: TextAlign.center,

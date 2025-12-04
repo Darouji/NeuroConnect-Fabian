@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firebase_service.dart';
 import '../utils/constants.dart';
 import '../utils/app_colors.dart';
-import '../widgets/category_card.dart'; // Ahora debería funcionar porque renombraste la carpeta
+import '../widgets/category_card.dart';
 import 'form_screen.dart';
 import 'auth/login_screen.dart';
 import 'category_list_screen.dart';
@@ -21,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final FirebaseService _firebaseService = FirebaseService();
   bool _isAdmin = false;
 
+  // Defino manualmente mis categorías, iconos y colores.
   final List<Map<String, dynamic>> _categories = [
     {
       'title': 'Terapias Clínicas',
@@ -63,12 +64,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // Verifico si el usuario actual es admin al cargar la pantalla.
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkRole());
   }
 
   void _checkRole() {
     final User? user = _firebaseService.getCurrentUser();
     if (user != null && user.email != null) {
+      // Comparo el email actual con el email de admin que guardé en Constantes.
       if (user.email!.trim().toLowerCase() ==
           AppConstants.adminEmail.trim().toLowerCase()) {
         if (mounted) setState(() => _isAdmin = true);
@@ -76,6 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // Diálogo simple para que los usuarios envíen sugerencias.
   void _showFeedbackDialog() {
     final TextEditingController feedbackCtrl = TextEditingController();
     showDialog(
@@ -98,14 +102,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ElevatedButton(
             onPressed: () {
               if (feedbackCtrl.text.isNotEmpty) {
-                // Guardamos referencia a los datos antes de cerrar
                 final text = feedbackCtrl.text;
                 final email = _firebaseService.getCurrentUser()?.email;
 
                 _firebaseService.sendFeedback(text, email);
                 Navigator.pop(context);
 
-                // Verificamos mounted antes de usar ScaffoldMessenger
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Gracias por tu aporte')),
@@ -127,16 +129,17 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('NeuroConecta'),
         centerTitle: true,
         actions: [
+          // Botón de Feedback.
           IconButton(
             icon: const Icon(Icons.mail_outline),
             onPressed: _showFeedbackDialog,
             tooltip: 'Feedback',
           ),
+          // Botón de Cerrar Sesión.
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await _firebaseService.signOut();
-              // Verificación de seguridad (Async gap)
               if (!context.mounted) return;
 
               Navigator.of(context).pushAndRemoveUntil(
@@ -156,24 +159,29 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
+
+            // Construyo la grilla con las tarjetas.
             Expanded(
               child: GridView.builder(
                 itemCount: _categories.length,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
+                  crossAxisCount: 2, // Dos columnas.
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 0.75,
+                  childAspectRatio:
+                      0.75, // Ajusto la proporción ancho/alto de la tarjeta.
                 ),
                 itemBuilder: (context, index) {
                   final cat = _categories[index];
 
+                  // Uso mi widget personalizado CategoryCard.
                   return CategoryCard(
                     title: cat['title'],
                     description: cat['desc'],
                     icon: cat['icon'],
                     categoryColor: cat['color'],
                     onTap: () {
+                      // Al tocar, navego a la lista filtrada por esa categoría.
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => CategoryListScreen(
@@ -190,6 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+      // Solo muestro el botón flotante (+) si el usuario es Admin.
       floatingActionButton: _isAdmin
           ? FloatingActionButton(
               onPressed: () => Navigator.of(context).push(

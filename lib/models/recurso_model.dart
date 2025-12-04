@@ -1,13 +1,16 @@
 // Archivo: lib/models/recurso_model.dart
 
 class RecursoModel {
-  final String? id;
+  final String?
+  id; // El ID lo genera Firebase, por eso puede ser nulo al crearlo localmente.
   final String titulo;
   final String descripcion;
   final String autor;
-  final String? videoUrl;
+  final String?
+  videoUrl; // Es opcional, porque ahora permito subir solo archivos.
   final String categoria;
-  // NUEVOS CAMPOS PARA ARCHIVOS
+
+  // Agregué estos campos para soportar PDFs y documentos adjuntos.
   final String? archivoUrl;
   final String? archivoNombre;
 
@@ -22,6 +25,7 @@ class RecursoModel {
     this.archivoNombre,
   });
 
+  // Convierto mi objeto a un Mapa (JSON) para poder guardarlo en Firebase.
   Map<String, dynamic> toMap() {
     return {
       'titulo': titulo,
@@ -31,10 +35,12 @@ class RecursoModel {
       'categoria': categoria,
       'archivoUrl': archivoUrl,
       'archivoNombre': archivoNombre,
+      // Guardo la fecha en formato UTC para evitar problemas de zonas horarias.
       'timestamp': DateTime.now().toUtc().toIso8601String(),
     };
   }
 
+  // Hago lo contrario: recibo datos de Firebase y los convierto en mi objeto RecursoModel.
   factory RecursoModel.fromMap(Map<String, dynamic> map, String id) {
     return RecursoModel(
       id: id,

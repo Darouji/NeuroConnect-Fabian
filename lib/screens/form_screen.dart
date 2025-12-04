@@ -8,7 +8,10 @@ import '../services/firebase_service.dart';
 import '../models/recurso_model.dart';
 
 class FormScreen extends StatefulWidget {
-  const FormScreen({super.key});
+  // Acepto un recurso opcional. Si llega null, es CREAR. Si llega dato, es EDITAR.
+  final RecursoModel? recursoExistente;
+
+  const FormScreen({super.key, this.recursoExistente});
 
   @override
   State<FormScreen> createState() => _FormScreenState();
@@ -34,16 +37,49 @@ class _FormScreenState extends State<FormScreen> {
   final FirebaseService _firebaseService = FirebaseService();
   final ImagePicker _picker = ImagePicker();
 
+  // Variables para archivos NUEVOS (que sube ahora)
   File? _selectedVideo;
   File? _selectedFile;
   String? _selectedFileName;
 
+  // Variables para archivos YA EXISTENTES (en modo edición)
+  String? _existingVideoUrl;
+  String? _existingFileUrl;
+  String? _existingFileName;
+
   bool _isUploading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Si estoy editando, relleno los campos con la info que viene de Firebase.
+    if (widget.recursoExistente != null) {
+      final r = widget.recursoExistente!;
+      _tituloController.text = r.titulo;
+      _descripcionController.text = r.descripcion;
+      _autorController.text = r.autor;
+
+      // Me aseguro de que la categoría exista en mi lista, si no pongo General.
+      if (_categorias.contains(r.categoria)) {
+        _selectedCategoria = r.categoria;
+      } else {
+        _selectedCategoria = 'General';
+      }
+
+      // Guardo las referencias a los archivos antiguos.
+      _existingVideoUrl = r.videoUrl;
+      _existingFileUrl = r.archivoUrl;
+      _existingFileName = r.archivoNombre;
+    }
+  }
 
   Future<void> _pickVideo() async {
     final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
     if (video != null) {
-      setState(() => _selectedVideo = File(video.path));
+      setState(() {
+        _selectedVideo = File(video.path);
+        _existingVideoUrl = null; // Si elige uno nuevo, olvido el antiguo.
+      });
     }
   }
 
@@ -57,6 +93,8 @@ class _FormScreenState extends State<FormScreen> {
       setState(() {
         _selectedFile = File(result.files.single.path!);
         _selectedFileName = result.files.single.name;
+        _existingFileUrl = null; // Si elige uno nuevo, olvido el antiguo.
+        _existingFileName = null;
       });
     }
   }
@@ -64,13 +102,18 @@ class _FormScreenState extends State<FormScreen> {
   void _saveRecurso() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // VALIDACIÓN CORREGIDA: Al menos UNO de los dos debe existir
-    if (_selectedVideo == null && _selectedFile == null) {
+    // Lógica compleja: Valido si tiene AL MENOS un video o archivo (nuevo o viejo).
+    bool hasVideo =
+        _selectedVideo != null ||
+        (_existingVideoUrl != null && _existingVideoUrl!.isNotEmpty);
+    bool hasFile =
+        _selectedFile != null ||
+        (_existingFileUrl != null && _existingFileUrl!.isNotEmpty);
+
+    if (!hasVideo && !hasFile) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Debes subir un Video O un Archivo para crear la cápsula.',
-          ),
+          content: Text('Debes tener un Video O un Archivo para la cápsula.'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -80,39 +123,52 @@ class _FormScreenState extends State<FormScreen> {
     setState(() => _isUploading = true);
 
     try {
-      String? videoUrl;
-      // Solo subimos video si existe
+      // Determino qué URL de video guardar (la nueva o la vieja).
+      String? videoUrl = _existingVideoUrl;
       if (_selectedVideo != null) {
         videoUrl = await _firebaseService.uploadVideo(_selectedVideo!);
       }
 
-      String? fileUrl;
-      // Solo subimos archivo si existe
+      // Determino qué URL de archivo guardar.
+      String? fileUrl = _existingFileUrl;
+      String? fileName = _existingFileName;
       if (_selectedFile != null && _selectedFileName != null) {
         fileUrl = await _firebaseService.uploadFile(
           _selectedFile!,
           _selectedFileName!,
         );
+        fileName = _selectedFileName;
       }
 
       final recurso = RecursoModel(
+        id: widget.recursoExistente?.id, // Importante: mantengo el ID si edito.
         titulo: _tituloController.text.trim(),
         descripcion: _descripcionController.text.trim(),
         autor: _autorController.text.trim(),
         categoria: _selectedCategoria,
-        videoUrl: videoUrl, // Puede ser nulo
-        archivoUrl: fileUrl, // Puede ser nulo
-        archivoNombre: _selectedFileName,
+        videoUrl: videoUrl,
+        archivoUrl: fileUrl,
+        archivoNombre: fileName,
       );
 
-      await _firebaseService.saveRecurso(recurso);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('¡Contenido guardado correctamente!')),
-        );
-        Navigator.of(context).pop();
+      // Decido si llamo a ACTUALIZAR o CREAR.
+      if (widget.recursoExistente != null) {
+        await _firebaseService.updateRecurso(recurso);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('¡Cápsula actualizada!')),
+          );
+        }
+      } else {
+        await _firebaseService.saveRecurso(recurso);
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('¡Cápsula creada!')));
+        }
       }
+
+      if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -126,6 +182,8 @@ class _FormScreenState extends State<FormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    bool isEditing = widget.recursoExistente != null;
+
     if (_isUploading) {
       return const Scaffold(
         body: Center(
@@ -134,7 +192,7 @@ class _FormScreenState extends State<FormScreen> {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 20),
-              Text('Subiendo contenido...'),
+              Text('Guardando contenido...'),
             ],
           ),
         ),
@@ -143,8 +201,9 @@ class _FormScreenState extends State<FormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nueva Cápsula'),
-        backgroundColor: Colors.black, // Banner negro (Requerimiento)
+        // Cambio el título dinámicamente.
+        title: Text(isEditing ? 'Editar Cápsula' : 'Nueva Cápsula'),
+        backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -208,70 +267,65 @@ class _FormScreenState extends State<FormScreen> {
               const SizedBox(height: 30),
 
               const Text(
-                'Multimedia (Sube al menos uno)',
+                'Multimedia',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 15),
 
-              // --- VIDEO ---
+              // UI Video: Muestra ícono verde si ya hay video (nuevo o viejo).
               ListTile(
                 shape: RoundedRectangleBorder(
                   side: const BorderSide(color: Colors.grey),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 leading: Icon(
-                  _selectedVideo == null
-                      ? Icons.video_call
-                      : Icons.check_circle,
-                  color: _selectedVideo == null ? Colors.grey : Colors.green,
+                  (_selectedVideo != null || _existingVideoUrl != null)
+                      ? Icons.check_circle
+                      : Icons.video_call,
+                  color: (_selectedVideo != null || _existingVideoUrl != null)
+                      ? Colors.green
+                      : Colors.grey,
                 ),
                 title: Text(
-                  _selectedVideo == null
-                      ? 'Subir Video (Opcional)'
-                      : 'Video Seleccionado',
+                  _selectedVideo != null
+                      ? 'Nuevo video seleccionado'
+                      : (_existingVideoUrl != null
+                            ? 'Video actual guardado'
+                            : 'Subir Video'),
                 ),
-                subtitle: _selectedVideo != null
-                    ? Text(_selectedVideo!.path.split('/').last)
-                    : null,
-                trailing: _selectedVideo != null
-                    ? IconButton(
-                        icon: const Icon(Icons.close, color: Colors.red),
-                        onPressed: () => setState(() => _selectedVideo = null),
-                      )
-                    : null,
+                trailing: IconButton(
+                  icon: const Icon(Icons.upload_file),
+                  onPressed: _pickVideo,
+                ),
                 onTap: _pickVideo,
               ),
               const SizedBox(height: 15),
 
-              // --- ARCHIVO ---
+              // UI Archivo
               ListTile(
                 shape: RoundedRectangleBorder(
                   side: const BorderSide(color: Colors.grey),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 leading: Icon(
-                  _selectedFile == null
-                      ? Icons.attach_file
-                      : Icons.check_circle,
-                  color: _selectedFile == null ? Colors.grey : Colors.blue,
+                  (_selectedFile != null || _existingFileUrl != null)
+                      ? Icons.check_circle
+                      : Icons.attach_file,
+                  color: (_selectedFile != null || _existingFileUrl != null)
+                      ? Colors.blue
+                      : Colors.grey,
                 ),
                 title: Text(
-                  _selectedFile == null
-                      ? 'Adjuntar Archivo (Opcional)'
-                      : 'Archivo Seleccionado',
+                  _selectedFile != null
+                      ? 'Nuevo archivo seleccionado'
+                      : (_existingFileName != null
+                            ? '$_existingFileName (Actual)'
+                            : 'Adjuntar Archivo'),
                 ),
-                subtitle: _selectedFileName != null
-                    ? Text(_selectedFileName!)
-                    : null,
-                trailing: _selectedFile != null
-                    ? IconButton(
-                        icon: const Icon(Icons.close, color: Colors.red),
-                        onPressed: () => setState(() {
-                          _selectedFile = null;
-                          _selectedFileName = null;
-                        }),
-                      )
-                    : null,
+                trailing: IconButton(
+                  icon: const Icon(Icons.upload_file),
+                  onPressed: _pickFile,
+                ),
                 onTap: _pickFile,
               ),
 
@@ -282,8 +336,9 @@ class _FormScreenState extends State<FormScreen> {
                 height: 50,
                 child: ElevatedButton.icon(
                   onPressed: _saveRecurso,
-                  icon: const Icon(Icons.cloud_upload),
-                  label: const Text('PUBLICAR'),
+                  // Cambio el icono y texto según si estoy editando o creando.
+                  icon: Icon(isEditing ? Icons.save : Icons.cloud_upload),
+                  label: Text(isEditing ? 'GUARDAR CAMBIOS' : 'PUBLICAR'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
                     foregroundColor: Colors.white,

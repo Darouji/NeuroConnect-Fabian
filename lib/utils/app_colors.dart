@@ -3,29 +3,29 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // --- Colores de Marca ---
+  // Estos son mis colores principales de marca.
   static const Color primaryBlue = Colors.blueAccent;
   static const Color secondaryGrey = Colors.blueGrey;
 
-  // --- Fondos Neutros ---
+  // Defino los colores de fondo para modo claro y oscuro.
   static const Color backgroundLight = Color(0xFFFAFAFA); // Blanco humo
   static const Color backgroundDark = Color(0xFF121212); // Negro suave
 
+  // Colores para las superficies (tarjetas, appbars).
   static const Color surfaceLight = Colors.white;
   static const Color surfaceDark = Color(0xFF1E1E1E);
 
-  // --- Textos ---
+  // Colores para el texto según el fondo.
   static const Color textLight = Colors.black87;
   static const Color textDark = Colors.white;
   static const Color textSubtleLight = Colors.grey;
   static const Color textSubtleDark = Colors.white70;
 
-  // --- Bordes ---
+  // Colores para los bordes de mis tarjetas.
   static const Color borderLight = Colors.black;
   static const Color borderDark = Colors.grey;
 
-  // --- Colores de Categorías (Semánticos) ---
-  // Centralizamos estos colores para usarlos en Home y en Listas
+  // Aquí asigno un color específico a cada categoría para identificarlas visualmente.
   static const Color catTerapias = Colors.purple;
   static const Color catSaludMental = Colors.green;
   static const Color catContencion = Colors.blue;

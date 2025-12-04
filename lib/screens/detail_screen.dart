@@ -16,6 +16,7 @@ class DetailScreen extends StatefulWidget {
 }
 
 class _DetailScreenState extends State<DetailScreen> {
+  // Controladores para el reproductor de video.
   VideoPlayerController? _videoPlayerController;
   ChewieController? _chewieController;
   bool _isVideoInitialized = false;
@@ -23,7 +24,7 @@ class _DetailScreenState extends State<DetailScreen> {
   @override
   void initState() {
     super.initState();
-    // Solo inicializamos si HAY URL de video
+    // Solo intento cargar el video si realmente existe una URL válida.
     if (widget.recurso.videoUrl != null &&
         widget.recurso.videoUrl!.isNotEmpty) {
       _initializePlayer();
@@ -36,6 +37,8 @@ class _DetailScreenState extends State<DetailScreen> {
         Uri.parse(widget.recurso.videoUrl!),
       );
       await _videoPlayerController!.initialize();
+
+      // Configuro Chewie para tener controles bonitos (play, pause, pantalla completa).
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController!,
         autoPlay: false,
@@ -48,6 +51,7 @@ class _DetailScreenState extends State<DetailScreen> {
     }
   }
 
+  // Función para abrir el PDF o archivo adjunto en el navegador/app externa.
   Future<void> _openFile() async {
     final String? url = widget.recurso.archivoUrl;
     if (url != null) {
@@ -65,6 +69,7 @@ class _DetailScreenState extends State<DetailScreen> {
 
   @override
   void dispose() {
+    // Es muy importante liberar los recursos del video al salir de la pantalla.
     _videoPlayerController?.dispose();
     _chewieController?.dispose();
     super.dispose();
@@ -89,12 +94,13 @@ class _DetailScreenState extends State<DetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // SECCIÓN VIDEO (Solo se muestra si hay video)
+            // SECCIÓN SUPERIOR: VIDEO
             if (hasVideo)
               Container(
                 width: double.infinity,
                 height: 250,
                 color: Colors.black,
+                // Muestro el video solo si ya terminó de inicializarse.
                 child: _isVideoInitialized && _chewieController != null
                     ? Chewie(controller: _chewieController!)
                     : const Center(
@@ -115,7 +121,7 @@ class _DetailScreenState extends State<DetailScreen> {
                       ),
               )
             else
-              // Header alternativo si no hay video (para que no se vea vacío arriba)
+              // Si no hay video, muestro un encabezado gris genérico para que no se vea vacío.
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(30),
@@ -123,6 +129,7 @@ class _DetailScreenState extends State<DetailScreen> {
                 child: const Icon(Icons.article, size: 80, color: Colors.grey),
               ),
 
+            // SECCIÓN DE TEXTO Y DETALLES
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
@@ -160,7 +167,7 @@ class _DetailScreenState extends State<DetailScreen> {
 
                   const SizedBox(height: 30),
 
-                  // BOTÓN DESCARGA
+                  // BOTÓN DE DESCARGA (Solo si hay archivo)
                   if (hasFile)
                     SizedBox(
                       width: double.infinity,

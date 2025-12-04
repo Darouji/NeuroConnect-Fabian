@@ -20,7 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
 
   void _register() async {
-    // Valido si los campos cumplen con las reglas.
+    // Verifico que el email tenga arroba y la pass tenga 6 caracteres mínimo.
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -28,13 +28,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      // Intento registrar al usuario con el servicio de Firebase.
+      // Intento crear el usuario en Firebase.
       await _firebaseService.signUpWithEmail(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
 
-      // Si el registro es exitoso, navego al Home.
+      // Si funciona, voy al Home reemplazando la pantalla actual.
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -44,7 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ).showSnackBar(const SnackBar(content: Text('¡Registro exitoso!')));
       }
     } on FirebaseAuthException catch (e) {
-      // Manejo errores de Firebase (ej: correo ya en uso, contraseña débil).
+      // Traduzco los errores técnicos de Firebase a mensajes legibles.
       String message = 'Error al registrar. Inténtalo de nuevo.';
       if (e.code == 'weak-password') {
         message = 'La contraseña es demasiado débil.';
@@ -94,7 +94,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 40),
 
-              // Campo de Email
+              // Campo Email con validación.
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -112,10 +112,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Campo de Contraseña
+              // Campo Password con validación.
               TextFormField(
                 controller: _passwordController,
-                obscureText: true, // Para ocultar la contraseña.
+                obscureText: true,
                 decoration: const InputDecoration(
                   labelText: 'Contraseña (mínimo 6 caracteres)',
                   border: OutlineInputBorder(),
@@ -130,7 +130,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 30),
 
-              // Botón de Registro
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
@@ -150,11 +149,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
               const SizedBox(height: 16),
 
-              // Botón para volver al Login (si ya tiene cuenta).
               TextButton(
                 onPressed: () {
-                  // Vuelvo a la pantalla de Login
-                  Navigator.of(context).pop();
+                  Navigator.of(context).pop(); // Vuelve al Login.
                 },
                 child: const Text('¿Ya tienes una cuenta? Inicia Sesión'),
               ),

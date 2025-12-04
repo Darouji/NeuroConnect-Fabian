@@ -14,23 +14,30 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // Clave global para validar mi formulario antes de enviar datos.
   final _formKey = GlobalKey<FormState>();
+
+  // Controladores para capturar lo que el usuario escribe.
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
   final FirebaseService _firebaseService = FirebaseService();
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
+    // Apenas carga la pantalla, verifico si ya hay una sesión activa para saltar el login.
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkCurrentUser());
   }
 
   void _checkCurrentUser() {
     final user = _firebaseService.getCurrentUser();
+    // Si el usuario ya existe, lo mando directo al Home.
     if (user != null && mounted) _navigateToHome();
   }
 
+  // Función auxiliar para ir al Home y borrar el historial de navegación (para que no vuelvan al login con "atrás").
   void _navigateToHome() {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -38,9 +45,13 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // Lógica para login con Email y Contraseña.
   void _signInWithEmail() async {
+    // Si el formulario no es válido (ej. campos vacíos), no hago nada.
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
+
+    setState(() => _isLoading = true); // Muestro el circulito de carga.
+
     try {
       await _firebaseService.signInWithEmail(
         _emailController.text.trim(),
@@ -54,6 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // Lógica para login con Google.
   void _signInWithGoogle() async {
     setState(() => _isLoading = true);
     try {
@@ -66,6 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // Muestro errores en una barrita inferior (SnackBar).
   void _showError(String msg) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -76,6 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Si está cargando, muestro solo el indicador de progreso.
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -91,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // LOGO INTERNO SOLICITADO (Logo 2)
+              // Muestro mi logo secundario.
               SizedBox(
                 height: 250,
                 child: Image.asset(
@@ -103,6 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 30),
 
+              // Formulario de entrada de datos.
               Form(
                 key: _formKey,
                 child: Column(
@@ -118,7 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _passwordController,
-                      obscureText: true,
+                      obscureText: true, // Oculto la contraseña.
                       decoration: const InputDecoration(
                         labelText: 'Contraseña',
                         prefixIcon: Icon(Icons.lock_outline),
@@ -127,6 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 24),
 
+                    // Botón principal de Ingreso.
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -151,6 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
+              // Divisor visual con la letra "O".
               const SizedBox(height: 20),
               const Row(
                 children: [
@@ -164,6 +181,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 20),
 
+              // Botón de Google.
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -191,6 +209,8 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
 
               const SizedBox(height: 20),
+
+              // Link para ir a registrarse si no tiene cuenta.
               TextButton(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(

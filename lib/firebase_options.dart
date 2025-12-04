@@ -4,21 +4,13 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
-/// Default [FirebaseOptions] for use with your Firebase apps.
-///
-/// Example:
-/// ```dart
-/// import 'firebase_options.dart';
-/// // ...
-/// await Firebase.initializeApp(
-///   options: DefaultFirebaseOptions.currentPlatform,
-/// );
-/// ```
+// Esta clase contiene las llaves de configuración para conectar con mi proyecto Firebase.
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
       return web;
     }
+    // Aquí detecto en qué plataforma estoy corriendo para usar la config correcta.
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
@@ -85,5 +77,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'neuro-conecta.firebasestorage.app',
     measurementId: 'G-03JHB86PZZ',
   );
-
 }
