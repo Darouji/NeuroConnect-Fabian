@@ -19,11 +19,15 @@ pluginManagement {
 
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
-    // Puedes dejar esta versión o usar una anterior si es necesario.
-    id("com.android.application") version "8.11.1" apply false 
-    
-    // CAMBIO CLAVE: Versión de Kotlin requerida (1.9.24)
-    id("org.jetbrains.kotlin.android") version "1.9.24" apply false
+
+    // Utilizo esta versión del plugin de Android para asegurar la compatibilidad con las librerías externas.
+    id("com.android.application") version "8.12.1" apply false
+
+    // Configuro el plugin de Google Services para permitir la conexión con Firebase.
+    id("com.google.gms.google-services") version "4.4.1" apply false
+
+    // Defino la versión de Kotlin necesaria para leer la metadata de las dependencias actuales del proyecto.
+    id("org.jetbrains.kotlin.android") version "2.2.0" apply false
 }
 
 include(":app")

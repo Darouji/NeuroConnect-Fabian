@@ -1,87 +1,105 @@
-import 'package:flutter/material.dart';
-// Importo el servicio de Firebase para la lógica de CRUD.
-// import '../services/firebase_service.dart';
-// Importo el modelo para definir la estructura del objeto.
-// import '../models/recurso_model.dart';
+// Archivo: lib/screens/form_screen.dart
 
-// Lo defino como StatefulWidget para manejar los campos del formulario y la validación.
+import 'dart:io'; // Para manejar el archivo seleccionado.
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart'; // Para abrir la galería.
+import '../services/firebase_service.dart';
+import '../models/recurso_model.dart';
+
 class FormScreen extends StatefulWidget {
-  // Opcional: Recibir un objeto existente para editarlo.
+  // Recibir un objeto opcional para edición futura.
   // final RecursoModel? recursoToEdit;
-  const FormScreen({super.key /*, this.recursoToEdit */});
+  const FormScreen({super.key});
 
   @override
   State<FormScreen> createState() => _FormScreenState();
 }
 
 class _FormScreenState extends State<FormScreen> {
-  // Clave global para identificar y validar el Formulario.
   final _formKey = GlobalKey<FormState>();
-  // Controladores para obtener el texto de los campos de entrada.
+
+  // Controladores de texto.
   final TextEditingController _tituloController = TextEditingController();
   final TextEditingController _descripcionController = TextEditingController();
   final TextEditingController _autorController = TextEditingController();
 
-  // Función para manejar la acción de guardar/actualizar el recurso.
+  // Servicio de Firebase.
+  final FirebaseService _firebaseService = FirebaseService();
+
+  // Variables para manejar el video y el estado de carga.
+  File? _selectedVideo;
+  bool _isUploading = false;
+  final ImagePicker _picker = ImagePicker();
+
+  // Método para seleccionar video de la galería.
+  Future<void> _pickVideo() async {
+    final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
+    if (video != null) {
+      setState(() {
+        _selectedVideo = File(video.path);
+      });
+    }
+  }
+
+  // Método principal para guardar todo.
   void _saveRecurso() async {
-    // Si la validación del formulario es exitosa, procedo.
-    if (_formKey.currentState!.validate()) {
-      // Muestro un indicador de carga.
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Guardando Recurso...')));
+    if (!_formKey.currentState!.validate()) return;
 
-      // SIMULACIÓN: Aquí iría la lógica de CRUD (Crear/Actualizar) a Firebase.
-      // try {
-      //   final recurso = RecursoModel(
-      //     id: widget.recursoToEdit?.id, // Si estoy editando, uso el ID existente.
-      //     titulo: _tituloController.text,
-      //     descripcion: _descripcionController.text,
-      //     autor: _autorController.text,
-      //   );
-      //   // await FirebaseService().saveRecurso(recurso);
+    // Validación extra: Exigir que se seleccione un video (opcional según requerimiento).
+    if (_selectedVideo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor, selecciona un video para la cápsula.'),
+        ),
+      );
+      return;
+    }
 
-      //   // Si la operación es exitosa:
-      //   if (mounted) {
-      //     Navigator.of(context).pop(); // Vuelvo a la pantalla anterior (Home).
-      //     ScaffoldMessenger.of(context).showSnackBar(
-      //       const SnackBar(content: Text('Recurso guardado con éxito!')),
-      //     );
-      //   }
-      // } catch (e) {
-      //   // Muestro un error en caso de fallo.
-      //   ScaffoldMessenger.of(context).showSnackBar(
-      //     SnackBar(content: Text('Error al guardar: $e')),
-      //   );
-      // }
+    setState(() {
+      _isUploading = true;
+    });
 
-      // Simulación de guardado exitoso y regreso.
-      await Future.delayed(const Duration(seconds: 1));
+    try {
+      String? videoUrl;
+
+      // 1. Si hay un video seleccionado, lo subimos primero a Storage.
+      if (_selectedVideo != null) {
+        videoUrl = await _firebaseService.uploadVideo(_selectedVideo!);
+      }
+
+      // 2. Creamos el modelo con los datos del formulario y la URL del video.
+      final recurso = RecursoModel(
+        titulo: _tituloController.text.trim(),
+        descripcion: _descripcionController.text.trim(),
+        autor: _autorController.text.trim(),
+        videoUrl: videoUrl,
+      );
+
+      // 3. Guardamos los datos en Firestore.
+      await _firebaseService.saveRecurso(recurso);
+
       if (mounted) {
-        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Recurso guardado con éxito (simulado)!'),
-          ),
+          const SnackBar(content: Text('¡Cápsula creada exitosamente!')),
         );
+        Navigator.of(context).pop(); // Regresamos al Home.
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
       }
     }
   }
 
   @override
-  // Se llama cuando el widget se inicializa (útil para precargar datos de edición).
-  void initState() {
-    super.initState();
-    // Si recibí un objeto para editar (no nulo), lleno los campos.
-    // if (widget.recursoToEdit != null) {
-    //   _tituloController.text = widget.recursoToEdit!.titulo;
-    //   _descripcionController.text = widget.recursoToEdit!.descripcion;
-    //   _autorController.text = widget.recursoToEdit!.autor;
-    // }
-  }
-
-  @override
-  // Se llama cuando el widget se destruye (importante para liberar recursos).
   void dispose() {
     _tituloController.dispose();
     _descripcionController.dispose();
@@ -91,109 +109,156 @@ class _FormScreenState extends State<FormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Si se está subiendo, mostramos una pantalla de carga bloqueante.
+    if (_isUploading) {
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 20),
+              Text('Subiendo video y guardando datos...'),
+              Text(
+                'Esto puede tardar unos segundos.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        // El título cambia si estoy creando o editando.
-        title: const Text(
-          'Crear/Editar Recurso',
-        ), // widget.recursoToEdit == null ? 'Crear Recurso' : 'Editar Recurso',
-        backgroundColor: Colors.deepOrangeAccent,
+        title: const Text('Nueva Cápsula'),
+        backgroundColor:
+            Colors.blueAccent, // Cambiaremos esto luego por colores neutros.
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        // Form es el widget que permite la validación de los campos.
         child: Form(
-          key: _formKey, // Asigno la clave global al formulario.
+          key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              // Campo de texto para el Título del recurso (obligatorio).
+              const Text(
+                'Detalles de la Cápsula',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+
+              // Campo Título.
               TextFormField(
                 controller: _tituloController,
                 decoration: const InputDecoration(
-                  labelText: 'Título del Recurso',
+                  labelText: 'Título del Video',
                   border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.title),
+                  prefixIcon: Icon(Icons.movie_creation_outlined),
                 ),
-                // Función de validación: si el campo está vacío, muestro un error.
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'El título no puede estar vacío';
-                  }
-                  return null;
-                },
+                validator: (value) =>
+                    value!.isEmpty ? 'Ingresa un título' : null,
               ),
               const SizedBox(height: 16),
 
-              // Campo de texto para la Descripción (obligatorio y multilinea).
+              // Campo Descripción.
               TextFormField(
                 controller: _descripcionController,
+                maxLines: 3,
                 decoration: const InputDecoration(
-                  labelText: 'Descripción',
+                  labelText: 'Descripción del Contenido',
                   border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.description),
+                  prefixIcon: Icon(Icons.description_outlined),
                 ),
-                maxLines: 4, // Permito varias líneas de texto.
-                // Función de validación: si el campo está vacío, muestro un error.
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'La descripción no puede estar vacía';
-                  }
-                  return null;
-                },
+                validator: (value) =>
+                    value!.isEmpty ? 'Ingresa una descripción' : null,
               ),
               const SizedBox(height: 16),
 
-              // Campo de texto para el Autor/Fuente.
+              // Campo Autor.
               TextFormField(
                 controller: _autorController,
                 decoration: const InputDecoration(
-                  labelText: 'Autor/Fuente',
+                  labelText: 'Autor / Especialista',
                   border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
+                  prefixIcon: Icon(Icons.person_outline),
                 ),
+                validator: (value) =>
+                    value!.isEmpty ? 'Ingresa el autor' : null,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
-              // Botón principal para Guardar o Actualizar.
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _saveRecurso, // Llama a mi función para guardar.
-                  icon: const Icon(Icons.save),
-                  label: const Text(
-                    'Guardar Recurso',
-                    style: TextStyle(fontSize: 18),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepOrange,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.0),
+              // Sección de Selección de Video.
+              const Text(
+                'Archivo de Video',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+
+              // Tarjeta para seleccionar video.
+              Card(
+                elevation: 0,
+                color: Colors.grey[100],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: Colors.grey.shade300),
+                ),
+                child: InkWell(
+                  onTap: _pickVideo,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 30),
+                    child: Column(
+                      children: [
+                        Icon(
+                          _selectedVideo != null
+                              ? Icons.check_circle
+                              : Icons.cloud_upload_outlined,
+                          size: 40,
+                          color: _selectedVideo != null
+                              ? Colors.green
+                              : Colors.blueGrey,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _selectedVideo != null
+                              ? 'Video seleccionado: ${_selectedVideo!.path.split('/').last}'
+                              : 'Toca para seleccionar video de la galería',
+                          style: TextStyle(
+                            color: _selectedVideo != null
+                                ? Colors.green
+                                : Colors.grey[700],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
+              const SizedBox(height: 32),
 
-              // SIMULACIÓN: Botón de ELIMINAR (solo si se está editando).
-              // if (widget.recursoToEdit != null)
-              //   const SizedBox(height: 16),
-              //   SizedBox(
-              //     width: double.infinity,
-              //     child: OutlinedButton.icon(
-              //       onPressed: () {
-              //         // Aquí iría la lógica de DELETE a Firebase
-              //         // FirebaseService().deleteRecurso(widget.recursoToEdit!.id);
-              //       },
-              //       icon: const Icon(Icons.delete, color: Colors.red),
-              //       label: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-              //       style: OutlinedButton.styleFrom(
-              //         padding: const EdgeInsets.symmetric(vertical: 15),
-              //       ),
-              //     ),
-              //   ),
+              // Botón de Guardar.
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: _saveRecurso,
+                  icon: const Icon(Icons.save),
+                  label: const Text(
+                    'Subir y Guardar',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

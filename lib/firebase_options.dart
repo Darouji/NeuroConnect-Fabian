@@ -41,48 +41,49 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAESMB3R-l0u0o40cwyiquA9H1EZx7E610',
-    appId: '1:95970348842:web:7611836d71077670e51853',
-    messagingSenderId: '95970348842',
-    projectId: 'fir-41be9',
-    authDomain: 'fir-41be9.firebaseapp.com',
-    storageBucket: 'fir-41be9.firebasestorage.app',
-    measurementId: 'G-XYXHQ8M1JX',
+    apiKey: 'AIzaSyApP8mGDrmZIFY1mUn9_pe76XRnl6tsqTY',
+    appId: '1:643004916340:web:42520705c44f9441b36721',
+    messagingSenderId: '643004916340',
+    projectId: 'neuro-conecta',
+    authDomain: 'neuro-conecta.firebaseapp.com',
+    storageBucket: 'neuro-conecta.firebasestorage.app',
+    measurementId: 'G-NBD1WQT8GT',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBOAtaybtB14Tu-AIXONppmeW60ij0Y0e8',
-    appId: '1:95970348842:android:cedc838f1f3d5732e51853',
-    messagingSenderId: '95970348842',
-    projectId: 'fir-41be9',
-    storageBucket: 'fir-41be9.firebasestorage.app',
+    apiKey: 'AIzaSyDcpg4GOtMXTXjS-BG6mz4K-sptZSK1dUE',
+    appId: '1:643004916340:android:79a0e6cf3f67bb86b36721',
+    messagingSenderId: '643004916340',
+    projectId: 'neuro-conecta',
+    storageBucket: 'neuro-conecta.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDzp2byL8q23vwpMc-kZNWGpayYe4U2Aa8',
-    appId: '1:95970348842:ios:67bdbbb9319ac6c8e51853',
-    messagingSenderId: '95970348842',
-    projectId: 'fir-41be9',
-    storageBucket: 'fir-41be9.firebasestorage.app',
+    apiKey: 'AIzaSyBsEGi2S0GksthlxcME2JfGYWO5gy6FLBY',
+    appId: '1:643004916340:ios:e17a35a4d3d0c563b36721',
+    messagingSenderId: '643004916340',
+    projectId: 'neuro-conecta',
+    storageBucket: 'neuro-conecta.firebasestorage.app',
     iosBundleId: 'com.example.neuroConecta',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyDzp2byL8q23vwpMc-kZNWGpayYe4U2Aa8',
-    appId: '1:95970348842:ios:67bdbbb9319ac6c8e51853',
-    messagingSenderId: '95970348842',
-    projectId: 'fir-41be9',
-    storageBucket: 'fir-41be9.firebasestorage.app',
+    apiKey: 'AIzaSyBsEGi2S0GksthlxcME2JfGYWO5gy6FLBY',
+    appId: '1:643004916340:ios:e17a35a4d3d0c563b36721',
+    messagingSenderId: '643004916340',
+    projectId: 'neuro-conecta',
+    storageBucket: 'neuro-conecta.firebasestorage.app',
     iosBundleId: 'com.example.neuroConecta',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyAESMB3R-l0u0o40cwyiquA9H1EZx7E610',
-    appId: '1:95970348842:web:3af53025ea6cb351e51853',
-    messagingSenderId: '95970348842',
-    projectId: 'fir-41be9',
-    authDomain: 'fir-41be9.firebaseapp.com',
-    storageBucket: 'fir-41be9.firebasestorage.app',
-    measurementId: 'G-MBCGN0PTTR',
+    apiKey: 'AIzaSyApP8mGDrmZIFY1mUn9_pe76XRnl6tsqTY',
+    appId: '1:643004916340:web:931f901ef1374c79b36721',
+    messagingSenderId: '643004916340',
+    projectId: 'neuro-conecta',
+    authDomain: 'neuro-conecta.firebaseapp.com',
+    storageBucket: 'neuro-conecta.firebasestorage.app',
+    measurementId: 'G-03JHB86PZZ',
   );
+
 }

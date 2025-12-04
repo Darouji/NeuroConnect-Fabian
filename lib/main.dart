@@ -36,7 +36,7 @@ class NeuroconectaApp extends StatelessWidget {
       home: const WelcomeScreen(),
 
       // Defino las rutas para la navegación.
-      routes: {
+      routes: const {
         // Rutas irán aquí.
       },
     );

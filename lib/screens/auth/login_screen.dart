@@ -1,10 +1,10 @@
-// Archivo: lib/screens/auth/login_screen.dart (MODIFICADO)
+// Archivo: lib/screens/auth/login_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../home_screen.dart';
 import '../../services/firebase_service.dart';
 import 'package:neuro_conecta/screens/register_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Para manejar errores.
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,20 +14,25 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // Clave global para validar el formulario.
   final _formKey = GlobalKey<FormState>();
+
+  // Controladores para capturar el texto ingresado.
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  // Instancia de nuestro servicio de Firebase.
   final FirebaseService _firebaseService = FirebaseService();
+
+  // Estado de carga para mostrar el spinner.
   bool _isLoading = false;
 
-  // Función para INICIAR SESIÓN con Correo y Contraseña.
+  // Lógica para iniciar sesión con Correo.
   void _signInWithEmail() async {
     if (!_formKey.currentState!.validate()) return;
     if (_isLoading) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       await _firebaseService.signInWithEmail(
@@ -41,46 +46,29 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } on FirebaseAuthException catch (e) {
-      // Manejo de errores específicos de login (ej: credenciales inválidas).
-      String message =
-          'Credenciales inválidas. Verifica tu correo y contraseña.';
-      if (e.code == 'user-not-found') {
-        message = 'Usuario no encontrado para ese correo.';
-      } else if (e.code == 'wrong-password') {
+      String message = 'Error de autenticación.';
+      if (e.code == 'user-not-found')
+        message = 'Usuario no encontrado.';
+      else if (e.code == 'wrong-password')
         message = 'Contraseña incorrecta.';
-      }
 
       if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(message)));
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error inesperado de red.')),
-        );
-      }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // Función para INICIAR SESIÓN con Google (la misma de antes).
+  // Lógica para iniciar sesión con Google.
   void _signInWithGoogle() async {
     if (_isLoading) return;
-
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final userCredential = await _firebaseService.signInWithGoogle();
-
       if (userCredential != null && mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -89,15 +77,11 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error de Autenticación con Google.')),
+          const SnackBar(content: Text('Error al iniciar con Google.')),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -110,29 +94,46 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Obtengo la altura total de la pantalla para calcular espacios si es necesario.
+    final size = MediaQuery.of(context).size;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Inicio de Sesión'), centerTitle: true),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
+      body: Center(
+        // Center asegura que el contenido del ScrollView esté centrado si sobra espacio.
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              const Icon(Icons.lock_open, size: 80, color: Colors.blueGrey),
-              const SizedBox(height: 40),
-
-              // Título para Correo y Contraseña
-              const Text(
-                'Inicia Sesión con Correo y Contraseña',
-                style: TextStyle(fontSize: 18),
+              // --- BRANDING ---
+              // Logo con altura de 300 como solicitaste.
+              // Usamos Container para asegurar que respete el espacio.
+              Container(
+                height: 300,
+                width: double
+                    .infinity, // Ocupa el ancho disponible para centrar la imagen.
+                alignment: Alignment.center,
+                child: Image.asset(
+                  'assets/images/neuro_conecta_logo.png',
+                  fit: BoxFit.contain,
+                ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
 
+              const Text(
+                'Bienvenido a NeuroConecta',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 30),
+
+              // --- FORMULARIO ---
               Form(
                 key: _formKey,
                 child: Column(
                   children: [
-                    // Campo de Email
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -140,15 +141,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         labelText: 'Correo Electrónico',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.email),
+                        isDense:
+                            true, // Hace el campo un poco más compacto visualmente.
                       ),
                       validator: (value) =>
                           value == null || !value.contains('@')
-                          ? 'Introduce un correo válido'
+                          ? 'Correo inválido'
                           : null,
                     ),
                     const SizedBox(height: 16),
-
-                    // Campo de Contraseña
                     TextFormField(
                       controller: _passwordController,
                       obscureText: true,
@@ -156,14 +157,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         labelText: 'Contraseña',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.lock),
+                        isDense: true,
                       ),
                       validator: (value) => value == null || value.length < 6
                           ? 'Mínimo 6 caracteres'
                           : null,
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 24),
 
-                    // Botón de INICIAR SESIÓN con Correo/Contraseña
                     _isLoading
                         ? const CircularProgressIndicator()
                         : ElevatedButton(
@@ -177,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                             child: const Text(
-                              'Iniciar Sesión',
+                              'Ingresar',
                               style: TextStyle(fontSize: 18),
                             ),
                           ),
@@ -186,7 +187,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
 
               const SizedBox(height: 20),
-              // Separador o texto "o"
               const Text(
                 'O',
                 style: TextStyle(
@@ -196,29 +196,33 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Botón de INICIAR SESIÓN con Google
+              // --- BOTÓN GOOGLE ---
               ElevatedButton.icon(
                 onPressed: _signInWithGoogle,
-                icon: Image.asset('assets/google_logo.png', height: 24.0),
+                icon: const Icon(
+                  Icons.g_mobiledata,
+                  size: 35,
+                  color: Colors.blue,
+                ),
                 label: const Text(
-                  'Iniciar sesión con Google',
+                  'Continuar con Google',
                   style: TextStyle(fontSize: 18, color: Colors.black87),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   minimumSize: const Size(double.infinity, 50),
+                  elevation: 2,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8.0),
                     side: const BorderSide(color: Colors.grey),
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Botón para ir al registro.
+              // Botón Registro
               TextButton(
                 onPressed: () {
-                  // Navego a la nueva pantalla de registro.
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const RegisterScreen(),
