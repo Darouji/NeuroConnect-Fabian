@@ -37,7 +37,7 @@ class NeuroconectaApp extends StatelessWidget {
       title: 'NeuroConecta',
       debugShowCheckedModeBanner:
           false, // Quito la etiqueta "Debug" de la esquina.
-      // Aplico mis temas personalizados que definí en 'app_theme.dart'.
+      // Temas personalizados que definí en 'app_theme.dart'.
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode

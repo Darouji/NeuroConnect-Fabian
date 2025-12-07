@@ -59,10 +59,11 @@ class _DetailScreenState extends State<DetailScreen> {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('No se pudo abrir el archivo')),
           );
+        }
       }
     }
   }

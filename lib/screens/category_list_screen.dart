@@ -40,8 +40,9 @@ class CategoryListScreen extends StatelessWidget {
             child: StreamBuilder<QuerySnapshot>(
               stream: firebaseService.getRecursos(),
               builder: (context, snapshot) {
-                if (snapshot.hasError)
+                if (snapshot.hasError) {
                   return const Center(child: Text('Error al cargar'));
+                }
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());

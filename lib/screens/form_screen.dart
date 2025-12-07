@@ -242,7 +242,7 @@ class _FormScreenState extends State<FormScreen> {
               const SizedBox(height: 15),
 
               DropdownButtonFormField<String>(
-                value: _selectedCategoria,
+                initialValue: _selectedCategoria,
                 decoration: const InputDecoration(
                   labelText: 'Categoría',
                   border: OutlineInputBorder(),

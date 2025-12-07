@@ -1,45 +1,57 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+# ----------------------------------------------------------
+# .gitignore ACTUALIZADO Y SEGURO
+# Copia y pega todo esto en tu archivo .gitignore
+# ----------------------------------------------------------
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
-.dart_tool/
+# Archivos misceláneos de Flutter/Dart
+/build/
+/.dart_tool/
+.packages
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
-/coverage/
 
-# Symbolication related
-app.*.symbols
+# Archivos de configuración de IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
 
-# Obfuscation related
-app.*.map.json
+# ----------------------------------------------------------
+# ARCHIVOS DE SEGURIDAD Y CREDENCIALES (IMPORTANTE)
+# Bloquea cualquier archivo de configuración de Firebase
+# ----------------------------------------------------------
+lib/firebase_options.dart
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+macos/Runner/GoogleService-Info.plist
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# ----------------------------------------------------------
+# Archivos específicos de Android
+# ----------------------------------------------------------
+android/local.properties
+android/.gradle/
+android/gradle/
+**/android/build/
+**/android/app/build/
+android/*.apk
+android/*.ap_
+
+# ----------------------------------------------------------
+# Archivos específicos de iOS / macOS
+# ----------------------------------------------------------
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Runner.xcworkspace/
+ios/Runner.xcodeproj/project.xcworkspace/
+macos/Runner.xcworkspace/
+macos/Runner.xcodeproj/project.xcworkspace/
+*.DS_Store
+
+# ----------------------------------------------------------
+# Archivos específicos de Windows / Linux
+# ----------------------------------------------------------
+windows/flutter/generated_plugins.cmake
+linux/flutter/generated_plugins.cmake
